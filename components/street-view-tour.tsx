@@ -27,6 +27,11 @@ interface TourLocation {
   infoPoints: InfoPoint[]
 }
 
+interface StreetViewTourProps {
+  initialLocation?: TourLocation
+  onInfoPointPlace?: (position: { yaw: number; pitch: number }) => void
+}
+
 const tourLocations: TourLocation[] = [
   {
     id: "brasov-city",
@@ -152,7 +157,7 @@ const getIcon = (iconType: string) => {
   }
 }
 
-export function StreetViewTour() {
+export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetViewTourProps = {}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<any>(null)
   const rendererRef = useRef<any>(null)
@@ -161,7 +166,7 @@ export function StreetViewTour() {
   const animationIdRef = useRef<number>(0)
   const infoPointMeshesRef = useRef<{ [key: string]: any }>({})
 
-  const [currentLocationId, setCurrentLocationId] = useState("brasov-city")
+  const [currentLocationId, setCurrentLocationId] = useState(initialLocation?.id || "brasov-city")
   const [showInfo, setShowInfo] = useState(false)
   const [showMinimap, setShowMinimap] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -177,7 +182,12 @@ export function StreetViewTour() {
   const lastMouseRef = useRef({ x: 0, y: 0 })
   const currentRotationDisplayRef = useRef<HTMLDivElement>(null)
 
-  const currentLocation = tourLocations.find((loc) => loc.id === currentLocationId)!
+  // Combine default tour locations with any custom location
+  const allLocations = initialLocation 
+    ? [...tourLocations, initialLocation]
+    : tourLocations
+
+  const currentLocation = allLocations.find((loc) => loc.id === currentLocationId)!
 
   // Convert radians to degrees
   const radToDeg = (rad: number) => (rad * 180) / Math.PI
@@ -250,6 +260,8 @@ export function StreetViewTour() {
   }, [])
 
   // Mouse event handlers
+
+
   const handleMouseDown = useCallback((event: MouseEvent) => {
     isDraggingRef.current = true
     lastMouseRef.current = { x: event.clientX, y: event.clientY }
@@ -322,24 +334,49 @@ export function StreetViewTour() {
 
   // Load Three.js and initialize
   useEffect(() => {
+    // Set loading state
+    setIsLoading(true)
+    
     const loadThreeJS = async () => {
-      if (!window.THREE) {
-        const script = document.createElement("script")
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
-        script.async = true
-        document.head.appendChild(script)
+      try {
+        // Check if container exists
+        if (!containerRef.current) {
+          console.error("Container reference is not available")
+          return
+        }
+        
+        // Load Three.js if not already loaded
+        if (!window.THREE) {
+          console.log("Loading Three.js library...")
+          const script = document.createElement("script")
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+          script.async = true
+          document.head.appendChild(script)
 
-        await new Promise((resolve) => {
-          script.onload = resolve
-        })
+          await new Promise((resolve, reject) => {
+            script.onload = resolve
+            script.onerror = () => reject(new Error("Failed to load Three.js"))
+          })
+          console.log("Three.js library loaded successfully")
+        }
+
+        // Small delay to ensure DOM is fully ready
+        await new Promise(resolve => setTimeout(resolve, 200))
+        
+        // Initialize Three.js
+        console.log("Initializing Three.js scene...")
+        initializeThreeJS()
+      } catch (error) {
+        console.error("Error initializing Three.js:", error)
+        setIsLoading(false)
       }
-
-      initializeThreeJS()
     }
 
+    // Start loading process
     loadThreeJS()
 
     return () => {
+      console.log("Cleaning up Three.js resources")
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current)
       }
@@ -368,106 +405,271 @@ export function StreetViewTour() {
     return () => clearInterval(interval)
   }, [updateInfoPointPositions, isLoading, isTransitioning])
 
-  const initializeThreeJS = () => {
-    if (!containerRef.current || !window.THREE) return
-
-    const THREE = window.THREE
-
-    // Scene
-    const scene = new THREE.Scene()
-    sceneRef.current = scene
-
-    // Camera
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-    camera.position.set(0, 0, 0)
-    cameraRef.current = camera
-
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight)
-    renderer.setPixelRatio(window.devicePixelRatio)
-    containerRef.current.appendChild(renderer.domElement)
-    rendererRef.current = renderer
-
-    // Sphere geometry for panorama
-    const geometry = new THREE.SphereGeometry(500, 60, 40)
-    geometry.scale(-1, 1, 1) // Invert to see from inside
-
-    // Material
-    const material = new THREE.MeshBasicMaterial()
-    const sphere = new THREE.Mesh(geometry, material)
-    scene.add(sphere)
-    sphereRef.current = sphere
-
-    // Set up controls
-    const canvas = renderer.domElement
-    canvas.style.cursor = "grab"
-    canvas.style.userSelect = "none"
-
-    // Add event listeners
-    canvas.addEventListener("mousedown", handleMouseDown)
-    document.addEventListener("mousemove", handleMouseMove)
-    document.addEventListener("mouseup", handleMouseUp)
-    canvas.addEventListener("mouseleave", handleMouseUp)
-
-    canvas.addEventListener("touchstart", handleTouchStart, { passive: false })
-    canvas.addEventListener("touchmove", handleTouchMove, { passive: false })
-    canvas.addEventListener("touchend", handleTouchEnd)
-
-    // Load initial panorama
-    updatePanorama(currentLocation.image)
-
-    // Handle window resize
-    const handleResize = () => {
-      if (!containerRef.current) return
-      camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight
-      camera.updateProjectionMatrix()
-      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight)
-      updateInfoPointPositions()
-    }
-
-    window.addEventListener("resize", handleResize)
-
-    // Animation loop
-    const animate = () => {
-      animationIdRef.current = requestAnimationFrame(animate)
-
-      // Apply rotation to camera
-      if (cameraRef.current) {
-        cameraRef.current.rotation.x = rotationRef.current.x
-        cameraRef.current.rotation.y = rotationRef.current.y
-        cameraRef.current.rotation.order = "YXZ"
-      }
-
-      renderer.render(scene, camera)
-    }
-
-    animate()
-    setIsLoading(false)
-  }
-
+  // Define updatePanorama function before it's used
   const updatePanorama = (imageUrl: string) => {
-    if (!sphereRef.current || !window.THREE) return
+    if (!sphereRef.current || !window.THREE) {
+      console.error("Cannot update panorama: sphere or THREE not available")
+      return
+    }
 
+    console.log("Loading panorama texture:", imageUrl)
+    setIsTransitioning(true)
+    
     const THREE = window.THREE
     const loader = new THREE.TextureLoader()
 
     loader.load(
       imageUrl,
       (texture: any) => {
+        console.log("Texture loaded successfully")
         texture.minFilter = THREE.LinearFilter
-        sphereRef.current.material.map = texture
-        sphereRef.current.material.needsUpdate = true
+        if (sphereRef.current) {
+          sphereRef.current.material.map = texture
+          sphereRef.current.material.needsUpdate = true
+        }
         setIsTransitioning(false)
         updateInfoPointPositions()
       },
-      undefined,
+      (progress: any) => {
+        // Optional: Show loading progress
+        console.log(`Loading: ${Math.round((progress.loaded / progress.total) * 100)}%`)
+      },
       (error: any) => {
         console.error("Error loading texture:", error)
         setIsTransitioning(false)
       },
     )
   }
+
+  const initializeThreeJS = () => {
+    try {
+      // Double check that container and Three.js are available
+      if (!containerRef.current) {
+        console.error("Container reference is still not available")
+        return
+      }
+      
+      if (!window.THREE) {
+        console.error("Three.js is not loaded")
+        return
+      }
+
+      console.log("Starting Three.js initialization")
+      const THREE = window.THREE
+
+      // Clear any existing content in the container
+      while (containerRef.current.firstChild) {
+        containerRef.current.removeChild(containerRef.current.firstChild)
+      }
+
+      // Scene
+      const scene = new THREE.Scene()
+      sceneRef.current = scene
+      console.log("Scene created")
+
+      // Camera
+      const camera = new THREE.PerspectiveCamera(
+        75, 
+        containerRef.current.clientWidth / containerRef.current.clientHeight, 
+        0.1, 
+        1000
+      )
+      camera.position.set(0, 0, 0)
+      cameraRef.current = camera
+      console.log("Camera created")
+
+      // Renderer
+      const renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance'
+      })
+      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight)
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)) // Limit pixel ratio for performance
+      containerRef.current.appendChild(renderer.domElement)
+      rendererRef.current = renderer
+      console.log("Renderer created and attached to DOM")
+
+      // Sphere geometry for panorama
+      const geometry = new THREE.SphereGeometry(500, 60, 40)
+      geometry.scale(-1, 1, 1) // Invert to see from inside
+
+      // Material
+      const material = new THREE.MeshBasicMaterial()
+      const sphere = new THREE.Mesh(geometry, material)
+      scene.add(sphere)
+      sphereRef.current = sphere
+      console.log("Sphere geometry created")
+      
+      // Force initial render
+      renderer.render(scene, camera)
+
+      // Set up controls
+      const canvas = renderer.domElement
+      canvas.style.cursor = "grab"
+      canvas.style.userSelect = "none"
+
+      // Add event listeners
+      canvas.addEventListener("mousedown", handleMouseDown)
+      document.addEventListener("mousemove", handleMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+      canvas.addEventListener("mouseleave", handleMouseUp)
+
+      canvas.addEventListener("touchstart", handleTouchStart, { passive: false })
+      canvas.addEventListener("touchmove", handleTouchMove, { passive: false })
+      canvas.addEventListener("touchend", handleTouchEnd)
+      
+      // Add double click event listener for info point placement
+      if (onInfoPointPlace) {
+        canvas.addEventListener("dblclick", (event: MouseEvent) => {
+          if (!onInfoPointPlace || !containerRef.current) return
+          
+          // Get mouse position relative to container
+          const rect = containerRef.current.getBoundingClientRect()
+          const x = event.clientX - rect.left
+          const y = event.clientY - rect.top
+          
+          // Convert to normalized device coordinates (-1 to +1)
+          const mouseX = (x / containerRef.current.clientWidth) * 2 - 1
+          const mouseY = -(y / containerRef.current.clientHeight) * 2 + 1
+          
+          // Create raycaster
+          const raycaster = new THREE.Raycaster()
+          raycaster.setFromCamera({ x: mouseX, y: mouseY }, camera)
+          
+          // Intersect with sphere (our panorama)
+          const intersects = raycaster.intersectObject(sphere)
+          
+          if (intersects.length > 0) {
+            // Get the raw intersection point without normalization
+            const hitPoint = intersects[0].point.clone()
+            
+            // เพิ่มการ debug เพื่อดูค่าต่างๆ
+            console.log('Intersection point:', hitPoint);
+            console.log('Camera rotation:', cameraRef.current ? {
+              x: radToDeg(cameraRef.current.rotation.x),
+              y: radToDeg(cameraRef.current.rotation.y),
+              z: radToDeg(cameraRef.current.rotation.z)
+            } : 'No camera');
+            
+            // วิธีการใหม่ที่แก้ปัญหาการวางตำแหน่งจุดสนใจ
+            // เราจะใช้การคำนวณโดยตรงจากจุดที่ถูกคลิกบนทรงกลม
+            
+            // สร้างเวกเตอร์จากจุดศูนย์กลางไปยังจุดที่คลิก
+            const center = new THREE.Vector3(0, 0, 0);
+            const clickVector = hitPoint.clone().sub(center).normalize();
+            
+            // แปลงเป็นค่า spherical เพื่อหาค่า yaw และ pitch
+            const sphericalCoords = new THREE.Spherical().setFromVector3(clickVector);
+            
+            // แปลงเป็นองศา
+            let yaw = radToDeg(sphericalCoords.theta);
+            let pitch = radToDeg(Math.PI / 2 - sphericalCoords.phi);
+            
+            console.log('Direct spherical calculation - yaw:', yaw, 'pitch:', pitch);
+            
+            // ทำให้ yaw อยู่ในช่วง -180 ถึง 180
+            yaw = ((yaw + 180) % 360) - 180;
+            
+            // จำกัดค่า pitch ให้อยู่ในช่วง -90 ถึง 90
+            pitch = Math.max(-90, Math.min(90, pitch));
+            
+            // ปรับค่าชดเชยสุดท้ายเพื่อให้ตำแหน่งตรงกับจุดที่คลิก
+            // ปรับค่า pitch ลงเล็กน้อยเพื่อให้จุดไม่ลอยขึ้นไปด้านบน
+            const finalYawOffset = 0;
+            const finalPitchOffset = -2.5; // ปรับลงเล็กน้อยเพื่อให้จุดตรงกับที่คลิกพอดี
+            
+            yaw += finalYawOffset;
+            pitch += finalPitchOffset;
+            
+            console.log(`Raycasting result: yaw: ${yaw.toFixed(2)}, pitch: ${pitch.toFixed(2)}`)
+            
+            // Call the callback with the calculated position
+            onInfoPointPlace({ yaw, pitch })
+          }
+        })
+      }
+
+      // Load initial panorama
+      updatePanorama(currentLocation.image)
+
+      // Handle window resize
+      const handleResize = () => {
+        if (!containerRef.current) return
+        camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight
+        camera.updateProjectionMatrix()
+        renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight)
+        updateInfoPointPositions()
+      }
+      
+      // Handle double click for placing info points using raycasting
+      const handleDoubleClick = (event: MouseEvent) => {
+        if (!onInfoPointPlace || !containerRef.current) return
+        
+        // Get mouse position relative to container
+        const rect = containerRef.current.getBoundingClientRect()
+        const x = event.clientX - rect.left
+        const y = event.clientY - rect.top
+        
+        // Convert to normalized device coordinates (-1 to +1)
+        const mouseX = (x / containerRef.current.clientWidth) * 2 - 1
+        const mouseY = -(y / containerRef.current.clientHeight) * 2 + 1
+        
+        // Create raycaster
+        const raycaster = new THREE.Raycaster()
+        raycaster.setFromCamera({ x: mouseX, y: mouseY }, camera)
+        
+        // Intersect with sphere (our panorama)
+        const intersects = raycaster.intersectObject(sphereRef.current)
+        
+        if (intersects.length > 0) {
+          // Get intersection point
+          const point = intersects[0].point.normalize()
+          
+          // Convert to spherical coordinates
+          let phi = Math.atan2(point.z, point.x)
+          let theta = Math.acos(point.y)
+          
+          // Convert to degrees
+          let yaw = radToDeg(phi)
+          let pitch = 90 - radToDeg(theta)
+          
+          console.log(`Raycasting result: yaw: ${yaw.toFixed(2)}, pitch: ${pitch.toFixed(2)}`)
+          
+          // Call the callback with the calculated position
+          onInfoPointPlace({ yaw, pitch })
+        }
+      }
+
+      window.addEventListener("resize", handleResize)
+      
+      // Animation loop
+      const animate = () => {
+        animationIdRef.current = requestAnimationFrame(animate)
+
+        // Apply rotation to camera
+        if (cameraRef.current) {
+          cameraRef.current.rotation.x = rotationRef.current.x
+          cameraRef.current.rotation.y = rotationRef.current.y
+          cameraRef.current.rotation.order = "YXZ"
+        }
+
+        renderer.render(scene, camera)
+      }
+
+      animate()
+      setIsLoading(false)
+      console.log("Three.js initialization complete")
+    } catch (error) {
+      console.error("Error in initializeThreeJS:", error)
+      setIsLoading(false)
+    }
+
+    // This is a duplicate animation loop that's already defined in the try block above
+    // Removing it to prevent conflicts
+  }
+
+  // updatePanorama function is now defined earlier in the component
 
   const navigateToLocation = (locationId: string) => {
     if (isTransitioning || locationId === currentLocationId) return
@@ -736,7 +938,7 @@ export function StreetViewTour() {
                 </Button>
               </div>
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {tourLocations.map((location, index) => (
+                {allLocations.map((location, index) => (
                   <button
                     key={location.id}
                     className={cn(
