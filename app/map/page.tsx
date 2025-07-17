@@ -2,7 +2,7 @@
 
 import { StreetViewTour } from "@/components/street-view-tour"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, MapPin } from "lucide-react"
+import { ChevronLeft, MapPin, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { TourData } from "@/types/tour-types"
@@ -13,6 +13,7 @@ export default function MapPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null)
+  const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(true)
   
   // ดึงข้อมูล tours จาก API
   useEffect(() => {
@@ -101,22 +102,34 @@ export default function MapPage() {
       {tours.length > 0 && (
         <div className="absolute top-4 right-4 z-10">
           <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-lg">
-            <div className="text-sm font-medium mb-2 flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              <span>เลือกสถานที่</span>
+            <div 
+              className="text-sm font-medium mb-2 flex items-center justify-between cursor-pointer"
+              onClick={() => setIsLocationSelectorOpen(!isLocationSelectorOpen)}
+            >
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span>เลือกสถานที่</span>
+              </div>
+              {isLocationSelectorOpen ? 
+                <ChevronUp className="h-4 w-4" /> : 
+                <ChevronDown className="h-4 w-4" />
+              }
             </div>
-            <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
-              {tours.map(tour => (
-                <Button 
-                  key={tour.id}
-                  variant={selectedTourId === tour.id ? "default" : "outline"}
-                  className="w-full justify-start text-left text-sm py-1 px-2 h-auto"
-                  onClick={() => setSelectedTourId(tour.id)}
-                >
-                  {tour.title}
-                </Button>
-              ))}
-            </div>
+            
+            {isLocationSelectorOpen && (
+              <div className="space-y-1 max-h-[200px] overflow-y-auto pr-1">
+                {tours.map(tour => (
+                  <Button 
+                    key={tour.id}
+                    variant={selectedTourId === tour.id ? "default" : "outline"}
+                    className="w-full justify-start text-left text-sm py-1 px-2 h-auto"
+                    onClick={() => setSelectedTourId(tour.id)}
+                  >
+                    {tour.title}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

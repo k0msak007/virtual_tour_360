@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Info, Menu, X, RotateCcw, Maximize, Home, InfoIcon, Building, TreePine, Store } from "lucide-react"
+import { MapPin, Info, Menu, X, RotateCcw, Maximize, Home, InfoIcon, Building, TreePine, Store, ZoomIn, ZoomOut, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface InfoPoint {
@@ -60,6 +60,11 @@ const getIcon = (iconType: string) => {
   }
 }
 
+// Convert degrees to radians - defined outside component to avoid re-creation on each render
+const degToRad = (deg: number) => (deg * Math.PI) / 180
+// Convert radians to degrees
+const radToDeg = (rad: number) => (rad * 180) / Math.PI
+
 export function StreetViewTour({ initialLocation, allLocations = [], onInfoPointPlace, onLocationChange, onInfoPointClick }: StreetViewTourProps = {}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<any>(null)
@@ -67,7 +72,11 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
   const cameraRef = useRef<any>(null)
   const sphereRef = useRef<any>(null)
   const animationIdRef = useRef<number>(0)
-  const infoPointMeshesRef = useRef<{ [key: string]: any }>({})
+  const infoPointMeshesRef = useRef<{ [key: string]: any }>({})  
+  // Add zoom state and limits
+  const [zoomLevel, setZoomLevel] = useState<number>(75) // Default FOV is 75
+  const MIN_ZOOM = 30 // Maximum zoom in (smaller FOV = more zoomed in)
+  const MAX_ZOOM = 90 // Maximum zoom out
 
   const [currentLocationId, setCurrentLocationId] = useState(initialLocation?.id || "brasov-city")
   const [showInfo, setShowInfo] = useState(false)
@@ -80,7 +89,7 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
   }>({})
 
   // Use refs for rotation to avoid stale closures
-  const rotationRef = useRef({ x: 0, y: 0 })
+  const rotationRef = useRef({ x: 0, y: degToRad(100) }) // เริ่มที่ 100 องศา
   const isDraggingRef = useRef(false)
   const lastMouseRef = useRef({ x: 0, y: 0 })
   const currentRotationDisplayRef = useRef<HTMLDivElement>(null)
@@ -92,12 +101,6 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
 
   // เพิ่มค่าเริ่มต้นเป็น null เพื่อให้ TypeScript รู้ว่าอาจเป็น undefined ได้
   const currentLocation = availableLocations.find((loc) => loc.id === currentLocationId) || null
-
-  // Convert radians to degrees
-  const radToDeg = (rad: number) => (rad * 180) / Math.PI
-
-  // Convert degrees to radians
-  const degToRad = (deg: number) => (deg * Math.PI) / 180
 
   // Convert spherical coordinates to 3D position
   const sphericalToCartesian = (yaw: number, pitch: number, distance: number) => {
@@ -160,9 +163,16 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
   // Update compass display
   const updateCompass = useCallback(() => {
     if (currentRotationDisplayRef.current) {
+      // คำนวณองศาจาก radians
       let degrees = Math.round(radToDeg(rotationRef.current.y))
+      
+      // ทำให้ค่าอยู่ในช่วง 0-360
       degrees = ((degrees % 360) + 360) % 360
-      currentRotationDisplayRef.current.textContent = `${degrees}°`
+      
+      // ปรับค่าให้ 100 องศาเป็นจุดเริ่มต้นที่ 0
+      let adjustedDegrees = (degrees - 100 + 360) % 360
+      
+      currentRotationDisplayRef.current.textContent = `${adjustedDegrees}°`
     }
   }, [])
 
@@ -205,6 +215,39 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
     }
   }, [])
 
+  // Zoom handler function
+  const handleZoom = useCallback((delta: number) => {
+    // Calculate new zoom level
+    const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel + delta))
+    
+    // Update zoom state
+    setZoomLevel(newZoom)
+    
+    // Update camera FOV if camera exists
+    if (cameraRef.current) {
+      cameraRef.current.fov = newZoom
+      cameraRef.current.updateProjectionMatrix()
+      
+      // Update info points after zoom change
+      updateInfoPointPositions()
+    }
+  }, [zoomLevel, updateInfoPointPositions])
+  
+  // Reset zoom function
+  const resetZoom = useCallback(() => {
+    // Reset to default zoom level (75)
+    setZoomLevel(75)
+    
+    // Update camera FOV if camera exists
+    if (cameraRef.current) {
+      cameraRef.current.fov = 75
+      cameraRef.current.updateProjectionMatrix()
+      
+      // Update info points after zoom reset
+      updateInfoPointPositions()
+    }
+  }, [updateInfoPointPositions])
+  
   // Touch event handlers
   const handleTouchStart = useCallback((event: TouchEvent) => {
     if (event.touches.length === 1) {
@@ -376,7 +419,7 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
 
       // Camera
       const camera = new THREE.PerspectiveCamera(
-        75, 
+        zoomLevel, // Use zoomLevel state instead of hardcoded 75
         containerRef.current.clientWidth / containerRef.current.clientHeight, 
         0.1, 
         1000
@@ -425,6 +468,14 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
       canvas.addEventListener("touchstart", handleTouchStart, { passive: false })
       canvas.addEventListener("touchmove", handleTouchMove, { passive: false })
       canvas.addEventListener("touchend", handleTouchEnd)
+      
+      // Add wheel event listener for zooming
+      canvas.addEventListener("wheel", (event: WheelEvent) => {
+        event.preventDefault()
+        // Determine zoom direction (positive delta = zoom out, negative delta = zoom in)
+        const zoomDelta = event.deltaY > 0 ? 5 : -5
+        handleZoom(zoomDelta)
+      }, { passive: false })
       
       // Add double click event listener for info point placement
       if (onInfoPointPlace) {
@@ -594,7 +645,8 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
     if (targetLocation) {
       // ถ้าพบ location ที่ต้องการ ให้เปลี่ยนไปยัง location นั้น
       setCurrentLocationId(locationId)
-      rotationRef.current = { x: 0, y: 0 }
+      // เริ่มที่ 100 องศา (แปลงเป็น radians)
+      rotationRef.current = { x: 0, y: -degToRad(100) }
       updateCompass()
       
       // แจ้งการเปลี่ยน location กลับไปยัง parent component
@@ -618,7 +670,8 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
   }
 
   const resetView = () => {
-    rotationRef.current = { x: 0, y: 0 }
+    // เริ่มที่ 100 องศา (แปลงเป็น radians)
+    rotationRef.current = { x: 0, y: -degToRad(100) }
     updateCompass()
     updateInfoPointPositions()
   }
@@ -655,16 +708,17 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
 
   // Keyboard controls
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const step = 0.1
-      switch (event.key) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const step = 0.05
+      
+      switch (e.key) {
         case "ArrowLeft":
-          rotationRef.current.y -= step
+          rotationRef.current.y += step
           updateCompass()
           updateInfoPointPositions()
           break
         case "ArrowRight":
-          rotationRef.current.y += step
+          rotationRef.current.y -= step
           updateCompass()
           updateInfoPointPositions()
           break
@@ -678,6 +732,17 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
           break
         case "Escape":
           closeInfoPoint()
+          break
+        // Add keyboard shortcuts for zooming
+        case "+":
+        case "=": // Same key as + but without shift
+          handleZoom(-5) // Zoom in
+          break
+        case "-":
+          handleZoom(5) // Zoom out
+          break
+        case "0":
+          resetZoom() // Reset zoom
           break
       }
     }
@@ -817,16 +882,7 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
         <Card className="bg-gradient-to-br from-black/95 to-gray-900/95 border-gray-600/50 backdrop-blur-md shadow-2xl">
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/20 transition-all duration-300 hover:scale-110 w-12 h-12 rounded-xl"
-                onClick={() => navigateToLocation("brasov-city")}
-                title="กลับหน้าแรก"
-              >
-                <Home className="w-5 h-5" />
-              </Button>
-              <div className="w-px h-8 bg-gray-600/50"></div>
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -836,14 +892,33 @@ export function StreetViewTour({ initialLocation, allLocations = [], onInfoPoint
               >
                 <RotateCcw className="w-5 h-5" />
               </Button>
+
               <Button
                 variant="ghost"
                 size="icon"
                 className="text-white hover:bg-white/20 transition-all duration-300 hover:scale-110 w-12 h-12 rounded-xl"
-                onClick={toggleFullscreen}
-                title="เต็มจอ"
+                onClick={() => handleZoom(-5)}
+                title="ซูมเข้า"
               >
-                <Maximize className="w-5 h-5" />
+                <ZoomIn className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20 transition-all duration-300 hover:scale-110 w-12 h-12 rounded-xl"
+                onClick={() => handleZoom(5)}
+                title="ซูมออก"
+              >
+                <ZoomOut className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20 transition-all duration-300 hover:scale-110 w-12 h-12 rounded-xl"
+                onClick={resetZoom}
+                title="รีเซ็ตซูม"
+              >
+                <Search className="w-5 h-5" />
               </Button>
             </div>
           </CardContent>
