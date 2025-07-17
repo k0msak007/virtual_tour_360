@@ -1,10 +1,20 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { MapIcon, Upload, Camera, Globe, Compass } from "lucide-react"
+import { MapIcon, Upload, Camera, Globe, Compass, Settings } from "lucide-react"
+import { TourData } from "@/types/tour-types"
 
-export default function Home() {
+export default function HomePage() {
+  const [recentTours, setRecentTours] = useState<TourData[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  // ดึงข้อมูลทัวร์ล่าสุด
+  useEffect(() => {
+    // Add API call to fetch recent tours data
+  }, [])
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-900 text-white overflow-hidden relative">
       {/* Background Elements */}
@@ -38,7 +48,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl w-full">
           {/* Map Card */}
           <div className="group relative overflow-hidden rounded-2xl shadow-xl transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/20">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-indigo-700/90 group-hover:opacity-90 transition-opacity"></div>
@@ -105,6 +115,44 @@ export default function Home() {
                 <Link href="/upload">
                   <Button className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white">
                     Upload Images
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Manage Card */}
+          <div className="group relative overflow-hidden rounded-2xl shadow-xl transition-all duration-500 hover:shadow-2xl hover:shadow-green-500/20">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-green-700/90 group-hover:opacity-90 transition-opacity"></div>
+            
+            <div className="relative h-72 overflow-hidden bg-gradient-to-br from-blue-800 to-green-900">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-48 h-48 relative">
+                  <div className="absolute inset-0 rounded-full border-4 border-dashed border-green-300/30 animate-pulse"></div>
+                  <div className="absolute inset-4 rounded-full border-4 border-dashed border-green-300/40 animate-pulse"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Settings className="h-16 w-16 text-green-200/70" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 to-transparent"></div>
+              
+              <div className="absolute bottom-0 left-0 right-0 p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-green-500/30 backdrop-blur-sm rounded-lg">
+                    <Settings className="h-6 w-6 text-green-100" />
+                  </div>
+                  <h3 className="text-2xl font-bold">จัดการสถานที่</h3>
+                </div>
+                
+                <p className="text-green-100/90 mb-4">
+                  จัดการสถานที่และจุดสนใจต่างๆ เพิ่ม แก้ไข หรือลบข้อมูลในระบบ
+                </p>
+                
+                <Link href="/manage">
+                  <Button className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white">
+                    จัดการสถานที่
                   </Button>
                 </Link>
               </div>

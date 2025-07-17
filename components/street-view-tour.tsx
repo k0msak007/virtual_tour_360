@@ -17,6 +17,8 @@ interface InfoPoint {
   description: string
   details: string
   icon: string
+  type?: 'info' | 'scene' // ประเภทของจุดสนใจ (แสดงรายละเอียดหรือเปลี่ยน scene)
+  linkTo?: string // รหัสของ scene ที่ต้องการเชื่อมต่อ
 }
 
 interface TourLocation {
@@ -29,113 +31,14 @@ interface TourLocation {
 
 interface StreetViewTourProps {
   initialLocation?: TourLocation
+  allLocations?: TourLocation[] // เพิ่ม prop สำหรับรับข้อมูล locations ทั้งหมด
   onInfoPointPlace?: (position: { yaw: number; pitch: number }) => void
+  onLocationChange?: (locationId: string) => void // เพิ่ม prop สำหรับแจ้งเมื่อมีการเปลี่ยน scene
+  onInfoPointClick?: (infoPointId: string) => void // เพิ่ม prop สำหรับแจ้งเมื่อคลิกที่จุดสนใจ
 }
 
-const tourLocations: TourLocation[] = [
-  {
-    id: "brasov-city",
-    name: "เมืองบราซอฟ โรมาเนีย",
-    description: "วิวพาโนรามาของเมืองเก่าบราซอฟ ที่มีสถาปัตยกรรมยุโรปโบราณและภูเขาล้อมรอบ",
-    image:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/aerial-drone-panoramic-view-old-brasov-centre-romania.jpg-qabqKqeirSJMELHQ6fK0i2Vprikot8.jpeg",
-    infoPoints: [
-      {
-        id: "info1",
-        yaw: -60, // ซ้าย
-        pitch: -10, // เล็กน้อยลง
-        distance: 400,
-        title: "ศาลาว่าการเมือง",
-        description: "อาคารศาลาว่าการเมืองบราซอฟที่สร้างในศตวรรษที่ 15",
-        details:
-          "อาคารนี้เป็นสัญลักษณ์สำคัญของเมืองบราซอฟ สร้างขึ้นในสมัยจักรวรรดิออสโตร-ฮังการี มีสถาปัตยกรรมแบบโกธิคที่งดงาม และเป็นที่ตั้งของรัฐบาลท้องถิ่นมาจนถึงปัจจุบัน",
-        icon: "building",
-      },
-      {
-        id: "info2",
-        yaw: 30, // ขวา
-        pitch: -20, // มองลง
-        distance: 450,
-        title: "ภูเขาทัมปา",
-        description: "ภูเขาที่มีชื่อเสียงล้อมรอบเมืองบราซอฟ",
-        details:
-          "ภูเขาทัมปาเป็นสัญลักษณ์ของเมืองบราซอฟ มีความสูง 955 เมตร บนยอดเขามีป้าย 'BRASOV' คล้ายกับป้าย Hollywood ที่ลอสแองเจลิส นักท่องเที่ยวสามารถขึ้นไปชมวิวได้ด้วยกระเช้าลิฟต์",
-        icon: "mountain",
-      },
-      {
-        id: "info3",
-        yaw: 120, // หลัง
-        pitch: 5, // เล็กน้อยขึ้น
-        distance: 380,
-        title: "ตลาดเก่า",
-        description: "ตลาดแบบดั้งเดิมในใจกลางเมือง",
-        details:
-          "ตลาดเก่าแห่งนี้เป็นจุดซื้อขายสินค้าท้องถิ่นมาตั้งแต่ศตวรรษที่ 14 มีสินค้าหัตถกรรม อาหารพื้นเมือง และของที่ระลึกมากมาย เป็นสถานที่ที่นักท่องเที่ยวนิยมมาเยือน",
-        icon: "store",
-      },
-    ],
-  },
-  {
-    id: "japanese-room",
-    name: "ห้องสไตล์ญี่ปุ่น",
-    description: "ห้องแบบดั้งเดิมญี่ปุ่นที่มีเสื่อทาทามิ โต๊ะต่ำ และการตกแต่งแบบดั้งเดิม",
-    image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/5.jpg-GisNOSI4ed6o7UMhHxorZTGNl6eECG.jpeg",
-    infoPoints: [
-      {
-        id: "info4",
-        yaw: -45,
-        pitch: 15,
-        distance: 350,
-        title: "เสื่อทาทามิ",
-        description: "เสื่อทาทามิแบบดั้งเดิมญี่ปุ่น",
-        details:
-          "เสื่อทาทามิทำจากฟางข้าวที่ถักแน่น เป็นพื้นผิวที่นุ่มและระบายอากาศได้ดี ใช้ในบ้านญี่ปุ่นมาเป็นเวลาหลายศตวรรษ มีกลิ่นหอมธรรมชาติและช่วยควบคุมความชื้น",
-        icon: "building",
-      },
-      {
-        id: "info5",
-        yaw: 60,
-        pitch: -5,
-        distance: 320,
-        title: "โต๊ะชาญี่ปุ่น",
-        description: "โต๊ะต่ำสำหรับพิธีชา",
-        details:
-          "โต๊ะชาแบบดั้งเดิมที่ใช้ในพิธีชาญี่ปุ่น (Chanoyu) ทำจากไม้คุณภาพสูง มีการออกแบบที่เรียบง่ายแต่สวยงาม สะท้อนปรัชญาญี่ปุ่นเรื่องความเรียบง่ายและความสงบ",
-        icon: "building",
-      },
-    ],
-  },
-  {
-    id: "underground-market",
-    name: "ตลาดใต้ดิน",
-    description: "ตลาดใต้ดินแบบดั้งเดิมที่มีโคมไฟแดงและร้านค้าปิดประตูเหล็ก บรรยากาศแบบเอเชีย",
-    image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/4.jpg-t6EdNidsb1TwblIske9MKnDk4vwyVG.jpeg",
-    infoPoints: [
-      {
-        id: "info6",
-        yaw: 0,
-        pitch: -15,
-        distance: 300,
-        title: "โคมไฟแดง",
-        description: "โคมไฟแดงแบบดั้งเดิม",
-        details:
-          "โคมไฟแดงเหล่านี้เป็นสัญลักษณ์ของตลาดใต้ดินในเอเชีย ให้แสงสีแดงอุ่นๆ ที่สร้างบรรยากาศลึกลับและน่าค้นหา เป็นการออกแบบที่ได้รับอิทธิพลจากวัฒนธรรมจีนและญี่ปุ่น",
-        icon: "building",
-      },
-      {
-        id: "info7",
-        yaw: 90,
-        pitch: 0,
-        distance: 350,
-        title: "ร้านค้าโบราณ",
-        description: "ร้านค้าที่ปิดประตูเหล็ก",
-        details:
-          "ร้านค้าเหล่านี้เป็นร้านค้าแบบดั้งเดิมที่มีประตูเหล็กม้วน เมื่อปิดแล้วจะสร้างบรรยากาศที่ลึกลับ เป็นสถาปัตยกรรมที่พบได้ทั่วไปในตลาดเก่าของเอเชีย",
-        icon: "store",
-      },
-    ],
-  },
-]
+// ลบข้อมูล mockup ออก
+const tourLocations: TourLocation[] = []
 
 declare global {
   interface Window {
@@ -157,7 +60,7 @@ const getIcon = (iconType: string) => {
   }
 }
 
-export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetViewTourProps = {}) {
+export function StreetViewTour({ initialLocation, allLocations = [], onInfoPointPlace, onLocationChange, onInfoPointClick }: StreetViewTourProps = {}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<any>(null)
   const rendererRef = useRef<any>(null)
@@ -182,12 +85,13 @@ export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetView
   const lastMouseRef = useRef({ x: 0, y: 0 })
   const currentRotationDisplayRef = useRef<HTMLDivElement>(null)
 
-  // Combine default tour locations with any custom location
-  const allLocations = initialLocation 
-    ? [...tourLocations, initialLocation]
-    : tourLocations
+  // Combine provided locations with any custom location
+  const availableLocations = initialLocation && !allLocations.some(loc => loc.id === initialLocation.id)
+    ? [...allLocations, initialLocation]
+    : allLocations
 
-  const currentLocation = allLocations.find((loc) => loc.id === currentLocationId)!
+  // เพิ่มค่าเริ่มต้นเป็น null เพื่อให้ TypeScript รู้ว่าอาจเป็น undefined ได้
+  const currentLocation = availableLocations.find((loc) => loc.id === currentLocationId) || null
 
   // Convert radians to degrees
   const radToDeg = (rad: number) => (rad * 180) / Math.PI
@@ -238,7 +142,10 @@ export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetView
 
     const newPositions: { [key: string]: { x: number; y: number; visible: boolean; scale: number } } = {}
 
-    currentLocation.infoPoints.forEach((infoPoint) => {
+    // เพิ่มการตรวจสอบว่า infoPoints มีค่าหรือไม่
+    const infoPoints = currentLocation.infoPoints || []
+    
+    infoPoints.forEach((infoPoint) => {
       const position3D = sphericalToCartesian(infoPoint.yaw, infoPoint.pitch, infoPoint.distance)
       const screenPos = projectToScreen(position3D)
 
@@ -591,7 +498,12 @@ export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetView
       }
 
       // Load initial panorama
-      updatePanorama(currentLocation.image)
+      if (currentLocation) {
+        updatePanorama(currentLocation.image)
+      } else {
+        console.warn('No current location available to load panorama')
+        setIsLoading(false)
+      }
 
       // Handle window resize
       const handleResize = () => {
@@ -675,9 +587,34 @@ export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetView
     if (isTransitioning || locationId === currentLocationId) return
 
     setIsTransitioning(true)
-    setCurrentLocationId(locationId)
-    rotationRef.current = { x: 0, y: 0 }
-    updateCompass()
+    
+    // ตรวจสอบว่ามี location ที่ต้องการหรือไม่
+    const targetLocation = availableLocations.find(loc => loc.id === locationId)
+    
+    if (targetLocation) {
+      // ถ้าพบ location ที่ต้องการ ให้เปลี่ยนไปยัง location นั้น
+      setCurrentLocationId(locationId)
+      rotationRef.current = { x: 0, y: 0 }
+      updateCompass()
+      
+      // แจ้งการเปลี่ยน location กลับไปยัง parent component
+      if (onLocationChange) {
+        onLocationChange(locationId)
+      }
+      
+      // อัปเดตภาพพาโนรามา
+      setTimeout(() => {
+        updatePanorama(targetLocation.image)
+        setIsTransitioning(false)
+      }, 1000)
+    } else {
+      // ถ้าไม่พบ location ที่ต้องการ ให้แสดงข้อความแจ้งเตือนและยกเลิกการเปลี่ยน scene
+      console.error(`Location with ID ${locationId} not found`)
+      setIsTransitioning(false)
+      
+      // แสดงข้อความแจ้งเตือนให้ผู้ใช้ทราบ (อาจเพิ่ม UI สำหรับแสดงข้อความแจ้งเตือนในอนาคต)
+      alert(`ไม่พบสถานที่ที่ต้องการ (ID: ${locationId})`)
+    }
   }
 
   const resetView = () => {
@@ -695,7 +632,21 @@ export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetView
   }
 
   const handleInfoPointClick = (infoPoint: InfoPoint) => {
-    setSelectedInfoPoint(infoPoint)
+    // ถ้ามี prop onInfoPointClick ให้เรียกใช้ prop นี้
+    if (onInfoPointClick) {
+      onInfoPointClick(infoPoint.id)
+      return
+    }
+    
+    // ถ้าเป็นจุดสนใจประเภท scene ให้เปลี่ยน scene ไปยัง scene ที่ระบุใน linkTo
+    if (infoPoint.type === 'scene' && infoPoint.linkTo) {
+      console.log(`Navigating to location: ${infoPoint.linkTo}`)
+      navigateToLocation(infoPoint.linkTo)
+    } else {
+      // ถ้าเป็นจุดสนใจประเภท info ให้แสดงรายละเอียดของจุดสนใจ
+      setSelectedInfoPoint(infoPoint)
+      setShowInfo(true)
+    }
   }
 
   const closeInfoPoint = () => {
@@ -758,7 +709,7 @@ export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetView
       <div ref={containerRef} className="w-full h-full" />
 
       {/* Info Points - Positioned using 3D projection */}
-      {!isLoading &&
+      {!isLoading && currentLocation && Array.isArray(currentLocation.infoPoints) && 
         currentLocation.infoPoints.map((infoPoint) => {
           const position = infoPointPositions[infoPoint.id]
           if (!position || !position.visible) return null
@@ -861,28 +812,6 @@ export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetView
         </div>
       </div>
 
-      {/* Top Controls */}
-      <div className="absolute top-6 right-6 z-30">
-        <div className="flex gap-3">
-          <Button
-            variant="secondary"
-            size="icon"
-            className="bg-black/95 border-gray-600/50 hover:bg-black/80 backdrop-blur-md shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 w-12 h-12"
-            onClick={() => setShowInfo(!showInfo)}
-          >
-            <Info className="w-5 h-5 text-white" />
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="bg-black/95 border-gray-600/50 hover:bg-black/80 backdrop-blur-md shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 w-12 h-12"
-            onClick={() => setShowMinimap(!showMinimap)}
-          >
-            <Menu className="w-5 h-5 text-white" />
-          </Button>
-        </div>
-      </div>
-
       {/* Bottom Controls */}
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30">
         <Card className="bg-gradient-to-br from-black/95 to-gray-900/95 border-gray-600/50 backdrop-blur-md shadow-2xl">
@@ -971,59 +900,6 @@ export function StreetViewTour({ initialLocation, onInfoPointPlace }: StreetView
                     </div>
                   </button>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Info Panel */}
-      {showInfo && (
-        <div className="absolute top-24 left-6 z-40 animate-in slide-in-from-left-5 duration-300">
-          <Card className="bg-gradient-to-br from-black/98 to-gray-900/98 border-gray-600/50 w-96 backdrop-blur-md shadow-2xl">
-            <CardContent className="p-5">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white font-bold text-lg">วิธีการใช้งาน</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:bg-white/20 h-8 w-8 rounded-lg transition-all duration-300 hover:scale-110"
-                  onClick={() => setShowInfo(false)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="space-y-4 text-gray-300 text-sm">
-                <div className="p-3 rounded-lg bg-blue-600/10 border border-blue-500/20">
-                  <Badge variant="secondary" className="mb-2 bg-blue-600/20 text-blue-300 border-blue-500/30">
-                    🖱️ ลากเมาส์
-                  </Badge>
-                  <p className="text-gray-200">ลากเมาส์เพื่อมองรอบทิศทาง 360°</p>
-                </div>
-                <div className="p-3 rounded-lg bg-green-600/10 border border-green-500/20">
-                  <Badge variant="secondary" className="mb-2 bg-green-600/20 text-green-300 border-green-500/30">
-                    📱 ลากนิ้ว
-                  </Badge>
-                  <p className="text-gray-200">ลากนิ้วบนหน้าจอสัมผัสเพื่อมองรอบ</p>
-                </div>
-                <div className="p-3 rounded-lg bg-purple-600/10 border border-purple-500/20">
-                  <Badge variant="secondary" className="mb-2 bg-purple-600/20 text-purple-300 border-purple-500/30">
-                    ℹ️ จุดข้อมูล
-                  </Badge>
-                  <p className="text-gray-200">จุดข้อมูลฝังอยู่ในภาพ คลิกเพื่อดูรายละเอียดสถานที่</p>
-                </div>
-                <div className="p-3 rounded-lg bg-orange-600/10 border border-orange-500/20">
-                  <Badge variant="secondary" className="mb-2 bg-orange-600/20 text-orange-300 border-orange-500/30">
-                    🗺️ เปลี่ยนสถานที่
-                  </Badge>
-                  <p className="text-gray-200">คลิกปุ่มเมนูเพื่อเลือกสถานที่ที่ต้องการเยี่ยมชม</p>
-                </div>
-                <div className="p-3 rounded-lg bg-red-600/10 border border-red-500/20">
-                  <Badge variant="secondary" className="mb-2 bg-red-600/20 text-red-300 border-red-500/30">
-                    🧭 เข็มทิศ
-                  </Badge>
-                  <p className="text-gray-200">ดูทิศทางปัจจุบันจากเข็มทิศด้านบน</p>
-                </div>
               </div>
             </CardContent>
           </Card>

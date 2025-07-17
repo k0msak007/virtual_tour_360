@@ -1,3 +1,170 @@
-{
-  "locations": []
-}
+[
+  {
+    "id": "396f001d-694b-4fb9-b150-c7dbb8bc647e",
+    "title": "ทางเข้า",
+    "description": "",
+    "location": "",
+    "imagePath": "/images/tours/396f001d-694b-4fb9-b150-c7dbb8bc647e.jpg",
+    "createdAt": "2025-07-17T04:07:25.336Z",
+    "infoPoints": [
+      {
+        "title": "ทางเดินโต๊ะ Developer",
+        "description": "",
+        "details": "",
+        "icon": "building",
+        "type": "scene",
+        "linkTo": "4e6e3147-262b-4f29-9467-d104537b5b61",
+        "id": "info-1pl9iair",
+        "yaw": -76.64308283698914,
+        "pitch": -10.211266666045283,
+        "distance": 400
+      },
+      {
+        "title": "แผงควบคุมระบบปรับอากาศ",
+        "description": "แอร์",
+        "details": "การทำความเย็น",
+        "icon": "store",
+        "type": "info",
+        "id": "info-9kfhie5d",
+        "yaw": -35.69609366620688,
+        "pitch": -28.89171780739928,
+        "distance": 400
+      }
+    ]
+  },
+  {
+    "id": "4e6e3147-262b-4f29-9467-d104537b5b61",
+    "title": "ทางเดินโต๊ะ Developer",
+    "description": "",
+    "location": "",
+    "imagePath": "/images/tours/4e6e3147-262b-4f29-9467-d104537b5b61.jpg",
+    "createdAt": "2025-07-17T04:08:21.950Z",
+    "infoPoints": [
+      {
+        "title": "ทางเข้า",
+        "description": "",
+        "details": "",
+        "icon": "store",
+        "type": "scene",
+        "linkTo": "396f001d-694b-4fb9-b150-c7dbb8bc647e",
+        "id": "info-aa6tubvz",
+        "yaw": 89.66007397943548,
+        "pitch": -20.850241511909907,
+        "distance": 400
+      },
+      {
+        "title": "ทางเดินโต๊ะ Support",
+        "description": "",
+        "details": "",
+        "icon": "store",
+        "type": "scene",
+        "linkTo": "603a2ade-dc06-4be9-882d-b9f0c3817e12",
+        "id": "info-56rjjrvn",
+        "yaw": -95.84461958942174,
+        "pitch": -3.9696701393159826,
+        "distance": 400
+      },
+      {
+        "title": "คอมพิวเตอร์",
+        "description": "คอมพิวเตอร์",
+        "details": "คอมพิวเตอร์",
+        "icon": "mountain",
+        "type": "info",
+        "id": "info-iznjasef",
+        "yaw": -11.060885895962315,
+        "pitch": -34.20291339122454,
+        "distance": 400
+      },
+      {
+        "title": "โต๊ะ Developer",
+        "description": "",
+        "details": "",
+        "icon": "store",
+        "type": "scene",
+        "linkTo": "43644747-5f2b-41cc-8412-dd58e08ec34c",
+        "id": "info-d36c6e21",
+        "yaw": -41.599152119085716,
+        "pitch": -27.247794611506436,
+        "distance": 400
+      }
+    ]
+  },
+  {
+    "id": "603a2ade-dc06-4be9-882d-b9f0c3817e12",
+    "title": "ทางเดินโต๊ะ Support",
+    "description": "",
+    "location": "",
+    "imagePath": "/images/tours/603a2ade-dc06-4be9-882d-b9f0c3817e12.jpg",
+    "createdAt": "2025-07-17T04:08:54.334Z",
+    "infoPoints": [
+      {
+        "title": "ทางเดินโต๊ะ Back Office",
+        "description": "",
+        "details": "",
+        "icon": "store",
+        "type": "scene",
+        "linkTo": "7a63c0fe-649f-4835-924e-896095007b06",
+        "id": "info-ufuq85rs",
+        "yaw": -85.89735212807238,
+        "pitch": -7.237866959896856,
+        "distance": 400
+      },
+      {
+        "title": "ทางเดินโต๊ะ Developer",
+        "description": "",
+        "details": "",
+        "icon": "store",
+        "type": "scene",
+        "linkTo": "4e6e3147-262b-4f29-9467-d104537b5b61",
+        "id": "info-bvct1i73",
+        "yaw": 89.76280520132798,
+        "pitch": -23.218383793823044,
+        "distance": 400
+      }
+    ]
+  },
+  {
+    "id": "7a63c0fe-649f-4835-924e-896095007b06",
+    "title": "ทางเดินโต๊ะ Back Office",
+    "description": "",
+    "location": "",
+    "imagePath": "/images/tours/7a63c0fe-649f-4835-924e-896095007b06.jpg",
+    "createdAt": "2025-07-17T04:09:24.839Z",
+    "infoPoints": [
+      {
+        "title": "ทางเดินโต๊ะ Support",
+        "description": "",
+        "details": "",
+        "icon": "store",
+        "type": "scene",
+        "linkTo": "603a2ade-dc06-4be9-882d-b9f0c3817e12",
+        "id": "info-wcmh19af",
+        "yaw": -78.364779932407,
+        "pitch": -5.4748073858563,
+        "distance": 400
+      }
+    ]
+  },
+  {
+    "id": "43644747-5f2b-41cc-8412-dd58e08ec34c",
+    "title": "โต๊ะ Developer",
+    "description": "",
+    "location": "",
+    "imagePath": "/images/tours/43644747-5f2b-41cc-8412-dd58e08ec34c.jpg",
+    "createdAt": "2025-07-17T04:09:46.652Z",
+    "infoPoints": [
+      {
+        "title": "ทางเดินโต๊ะ Developer",
+        "description": "",
+        "details": "",
+        "icon": "store",
+        "type": "scene",
+        "linkTo": "4e6e3147-262b-4f29-9467-d104537b5b61",
+        "id": "info-0o9t6kj4",
+        "yaw": 175.35176858522158,
+        "pitch": -28.159841064553113,
+        "distance": 400
+      }
+    ]
+  }
+]
